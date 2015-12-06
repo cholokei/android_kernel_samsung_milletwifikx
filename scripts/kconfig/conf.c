@@ -559,6 +559,7 @@ int main(int ac, char **av)
 				"***\n"), defconfig_file);
 			exit(1);
 		}
+/*
                 name = getenv("KCONFIG_SELINUX");
                 printf("KCONFIG_SELINUX(%s)\n", name);
                 if (name) {
@@ -614,6 +615,7 @@ int main(int ac, char **av)
 				exit(1);
 			}
 		}
+*/
 		break;
 	case savedefconfig:
 	case silentoldconfig:
