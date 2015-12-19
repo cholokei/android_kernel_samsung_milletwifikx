@@ -69,6 +69,7 @@ arch/arm/boot/Image
 arch/arm/boot/compressed/ashldi3.S
 arch/arm/boot/compressed/lib1funcs.S
 arch/arm/boot/compressed/piggy.gzip
+arch/arm/boot/compressed/piggy.xzkern
 arch/arm/boot/compressed/vmlinux
 arch/arm/boot/compressed/vmlinux.lds
 arch/arm/boot/msm8226-sec-milletwifieur-r00.dtb
