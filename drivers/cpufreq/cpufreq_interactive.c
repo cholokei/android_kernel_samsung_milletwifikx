@@ -36,6 +36,7 @@
 #include <trace/events/cpufreq_interactive.h>
 
 #define CONFIG_MODE_AUTO_CHANGE
+#define CONFIG_RETENTION_CHANGE
 
 static int active_count;
 
@@ -179,7 +180,13 @@ static unsigned int *above_hispeed_delay_set[MAX_PARAM_SET];
 static int nabove_hispeed_delay_set[MAX_PARAM_SET];
 static unsigned int sampling_down_factor_set[MAX_PARAM_SET];
 #endif /* CONFIG_MODE_AUTO_CHANGE */
-
+#ifdef CONFIG_RETENTION_CHANGE
+static void do_toggle_retention(struct work_struct *work);
+extern void msm_pm_retention_mode_enable(bool enable);
+static struct workqueue_struct *retention_toggle_wq;
+static struct work_struct retention_toggle_work;
+static int mode_count = 0;
+#endif
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
  * and if the highest frequency among the other CPUs is higher than
@@ -595,11 +602,17 @@ static void enter_mode(void)
 #else
 	set_new_param_set(1);
 #endif
+#ifdef CONFIG_RETENTION_CHANGE
+	queue_work(retention_toggle_wq, &retention_toggle_work);
+#endif
 }
 
 static void exit_mode(void)
 {
 	set_new_param_set(0);
+#ifdef CONFIG_RETENTION_CHANGE
+	queue_work(retention_toggle_wq, &retention_toggle_work);
+#endif
 }
 #endif
 
@@ -623,11 +636,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	unsigned int new_mode;
 #endif
-	if (!down_read_trylock(&pcpu->enable_sem)) {
-		if (!timer_pending(&pcpu->cpu_timer))
-			cpufreq_interactive_timer_resched(pcpu);
- 		return;
-	}
+	if (!down_read_trylock(&pcpu->enable_sem))
+		return;
 	if (!pcpu->governor_enabled)
 		goto exit;
 
@@ -649,9 +659,15 @@ static void cpufreq_interactive_timer(unsigned long data)
 	if (new_mode != mode) {
 		mode = new_mode;
 		if (new_mode & MULTI_MODE || new_mode & SINGLE_MODE) {
+#ifdef CONFIG_RETENTION_CHANGE
+			++mode_count;
+#endif
 			pr_info("Governor: enter mode 0x%x\n", mode);
 			enter_mode();
 		} else {
+#ifdef CONFIG_RETENTION_CHANGE
+			mode_count=0;
+#endif
 			pr_info("Governor: exit mode 0x%x\n", mode);
 			exit_mode();
 		}
@@ -694,7 +710,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 					continue;
 
 				max_load = max(max_load, picpu->prev_load);
-				max_freq = max(max_freq, picpu->policy->cur);
+				max_freq = max(max_freq, picpu->target_freq);
 			}
 
 			if (max_freq > up_threshold_any_cpu_freq &&
@@ -1800,6 +1816,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			pcpu = &per_cpu(cpuinfo, j);
 			down_write(&pcpu->enable_sem);
 			pcpu->governor_enabled = 0;
+			pcpu->target_freq = 0;
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
 			up_write(&pcpu->enable_sem);
@@ -1839,17 +1856,18 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			/* update target_freq firstly */
 			if (policy->max < pcpu->target_freq)
 				pcpu->target_freq = policy->max;
-			else if (policy->min > pcpu->target_freq){
+			else if (policy->min > pcpu->target_freq)
 				pcpu->target_freq = policy->min;
 
 			/* Reschedule timer.
-+			 * The governor needs more time to evaluate
-+			 * the load after changing policy parameters
+			 * Delete the timers, else the timer callback may
+			 * return without re-arm the timer when failed
+			 * acquire the semaphore. This race may cause timer
+			 * stopped unexpectedly.
 			 */
-				del_timer_sync(&pcpu->cpu_timer);
-				del_timer_sync(&pcpu->cpu_slack_timer);
-				cpufreq_interactive_timer_start(j);
-			}
+			del_timer_sync(&pcpu->cpu_timer);
+			del_timer_sync(&pcpu->cpu_slack_timer);
+			cpufreq_interactive_timer_start(j);
 			pcpu->minfreq_boost = 1;
 			up_write(&pcpu->enable_sem);
 		}
@@ -1887,6 +1905,12 @@ static int __init cpufreq_interactive_init(void)
 	spin_lock_init(&mode_lock);
 	cpufreq_param_set_init();
 #endif
+#ifdef CONFIG_RETENTION_CHANGE
+	retention_toggle_wq = alloc_workqueue("retentionToggle_wq", WQ_HIGHPRI, 0);
+	if(!retention_toggle_wq)
+		pr_info("retention toggle workqueue init error\n");
+	INIT_WORK(&retention_toggle_work, do_toggle_retention);
+#endif
 	mutex_init(&gov_lock);
 	speedchange_task =
 		kthread_create(cpufreq_interactive_speedchange_task, NULL,
@@ -1902,6 +1926,16 @@ static int __init cpufreq_interactive_init(void)
 
 	return cpufreq_register_governor(&cpufreq_gov_interactive);
 }
+
+#ifdef CONFIG_RETENTION_CHANGE
+static void do_toggle_retention(struct work_struct *work)
+{
+	if(mode_count == 1)
+		msm_pm_retention_mode_enable(0);
+	else if(mode_count == 0)
+		msm_pm_retention_mode_enable(1);
+}
+#endif	// CONFIG_RETENTION_CHANGE
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 fs_initcall(cpufreq_interactive_init);

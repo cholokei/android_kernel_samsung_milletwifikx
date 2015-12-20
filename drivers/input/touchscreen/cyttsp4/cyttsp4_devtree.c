@@ -533,6 +533,7 @@ static char *touch_setting_names[CY_IC_GRPNUM_NUM] = {
 };
 
 int avdd_gpio;
+const char *model_name;
 static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 		struct device_node *core_node)
 {
@@ -572,6 +573,11 @@ static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 	rc = of_property_read_u32(core_node, "cy,flags", &value);
 	if (!rc)
 		pdata->flags = value;
+
+	rc = of_property_read_string(core_node, "cy,pname", &model_name);
+	if (rc < 0)
+		goto fail_free;
+
 	avdd_gpio = of_get_named_gpio(core_node, "tsp,tsppwr_en", 0);
 	printk(KERN_INFO "[TSP] %s: avdd=%d", __func__, avdd_gpio);
 

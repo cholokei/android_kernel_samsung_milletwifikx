@@ -18,6 +18,10 @@
 #include <linux/host_notify.h>
 #endif
 
+#if defined(CONFIG_MACH_KLTE_CTC)
+#include <linux/qpnp/power-on.h>
+#endif
+
 #define ENABLE 1
 #define DISABLE 0
 
@@ -332,7 +336,20 @@ static void max77804k_set_input_current(struct max77804k_charger_data *charger,
 		/* disable only buck because power onoff test issue */
 		max77804k_write_reg(charger->max77804k->i2c,
 			set_reg, 0x19);
+
+#if defined(CONFIG_MACH_KLTE_CTC)
+		pr_info("%s: qpnp_pon_set_wd_timer 2s\n", __func__);
+		qpnp_pon_set_wd_timer(1, 1, 0x8);
+		msleep(10);
+#endif
+
 		max77804k_set_buck(charger, DISABLE);
+
+#if defined(CONFIG_MACH_KLTE_CTC)
+		msleep(10);
+		pr_info("%s: qpnp_pon_set_wd_timer 18s\n", __func__);
+		qpnp_pon_set_wd_timer(17, 1, 0xE);
+#endif
 		goto exit;
 	} else {
 		max77804k_change_charge_path(charger, charger->cable_type);
@@ -645,10 +662,17 @@ static void reduce_input_current(struct max77804k_charger_data *charger, int cur
 static int max77804k_get_vbus_state(struct max77804k_charger_data *charger)
 {
 	u8 reg_data;
+	union power_supply_propval value;
 
 	max77804k_read_reg(charger->max77804k->i2c,
 		MAX77804K_CHG_REG_CHG_DTLS_00, &reg_data);
-	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS)
+
+	psy_do_property("battery", get, POWER_SUPPLY_PROP_ONLINE,
+			value);
+
+	if (value.intval == POWER_SUPPLY_TYPE_WIRELESS || \
+			(charger->pdata->use_wireless_to_pogo && \
+			 value.intval == POWER_SUPPLY_TYPE_POGODOCK))
 		reg_data = ((reg_data & MAX77804K_WCIN_DTLS) >>
 			MAX77804K_WCIN_DTLS_SHIFT);
 	else
@@ -1527,7 +1551,9 @@ static void max77804k_chgin_isr_work(struct work_struct *work)
 					value.intval = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
 					psy_do_property("battery", set,
 							POWER_SUPPLY_PROP_HEALTH, value);
-				} else if ((battery_health == \
+				}
+			} else {
+				if ((battery_health == \
 							POWER_SUPPLY_HEALTH_OVERVOLTAGE) &&
 						(chgin_dtls != 0x02)) {
 					pr_info("%s: vbus_state : 0x%d, chg_state : 0x%d\n", __func__, chgin_dtls, chg_dtls);
@@ -1681,8 +1707,13 @@ static int sec_charger_parse_dt(struct max77804k_charger_data *charger)
 				pr_info("%s use bat irq %d\n", __func__, ret);
 
 				/* temporally assign for check*/
+				/* Removed check for Rubens as interrupt was coming in power measurrment tests*/
+#if !defined(CONFIG_SEC_RUBENS_PROJECT)
 				pdata->bat_irq_gpio = ret;
+#endif
 			}
+			pdata->use_wireless_to_pogo = of_property_read_bool(np,
+					"battery,use_wireless_to_pogo");
 		}
 	}
 

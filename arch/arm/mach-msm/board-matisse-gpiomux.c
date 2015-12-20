@@ -272,26 +272,6 @@ static struct gpiomux_setting synaptics_reset_sus_cfg = {
 };
 #endif
 
-#if defined (CONFIG_MACH_MATISSELTE_USC)
-static struct gpiomux_setting vibrator_state = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
-	.dir = GPIOMUX_IN,
-};
-
-static struct msm_gpiomux_config vibrator_configs[] __initdata = {
-        {
-                .gpio = 12,
-                .settings = {
-                        [GPIOMUX_ACTIVE]    = &vibrator_state,
-                        [GPIOMUX_SUSPENDED] = &vibrator_state,
-                },
-        },
-};
-
-#endif
-
 #if defined (CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC)
 static struct gpiomux_setting gpio_keys_vzw_active = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -311,12 +291,7 @@ static struct gpiomux_setting gpio_keys_active = {
 static struct gpiomux_setting gpio_keys_suspend = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-#if defined (CONFIG_MACH_MATISSELTE_VZW)
-	.pull = GPIOMUX_PULL_DOWN,
-	.dir = GPIOMUX_IN,
-#else
 	.pull = GPIOMUX_PULL_NONE,
-#endif
 };
 static struct gpiomux_setting hall_active_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -466,13 +441,8 @@ static struct msm_gpiomux_config msm_keypad_configs[] __initdata = {
 	{
 		.gpio = 107,
 		.settings = {
-#if defined(CONFIG_MACH_MATISSELTE_USC)
-			[GPIOMUX_ACTIVE]    = &nc_cfg,
-			[GPIOMUX_SUSPENDED] = &nc_cfg,
-#else
 			[GPIOMUX_ACTIVE]    = &gpio_keys_active,
 			[GPIOMUX_SUSPENDED] = &gpio_keys_suspend,
-#endif
 		},
 	},
 	{
@@ -1593,12 +1563,24 @@ static struct gpiomux_setting gpio_10_sda_config = {
 	.pull = GPIOMUX_PULL_NONE,
 	.dir = GPIOMUX_OUT_LOW,
 };
+static struct gpiomux_setting gpio_12_sda_config = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
 static struct msm_gpiomux_config msm_sda_configs[] = {
 	{
 		.gpio = 10,
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &gpio_10_sda_config,
 			[GPIOMUX_SUSPENDED] = &gpio_10_sda_config,
+		},
+	},
+	{
+		.gpio = 12,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_12_sda_config,
+			[GPIOMUX_SUSPENDED] = &gpio_12_sda_config,
 		},
 	},
 };
@@ -1655,10 +1637,6 @@ void __init msm8226_init_gpiomux(void)
 	msm_gpiomux_install(msm_keypad_configs,
 			ARRAY_SIZE(msm_keypad_configs));
 
-#if defined (CONFIG_MACH_MATISSELTE_USC)
-	msm_gpiomux_install(vibrator_configs,
-			ARRAY_SIZE(vibrator_configs));
-#endif
 	if (of_board_is_skuf())
 		msm_gpiomux_install(msm_skuf_blsp_configs,
 			ARRAY_SIZE(msm_skuf_blsp_configs));

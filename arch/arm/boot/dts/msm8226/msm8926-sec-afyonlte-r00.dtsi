@@ -178,6 +178,8 @@
 			interrupt-parent = <&msmgpio>;
 			interrupts = <64 0>;
 			bma255-i2c,i2c-pull-up = <1>;
+			bma255-i2c,scl = <&msmgpio 7 0>;
+			bma255-i2c,sda = <&msmgpio 6 0>;
 			bma255-i2c,vdd-supply = <&pm8226_l19>;
 			bma255-i2c,vdd-io-supply = <&pm8226_lvs1>;
 			bma255-i2c,acc_int1-gpio = <&msmgpio 64 0x1>;
@@ -237,7 +239,7 @@
 
 			/* CY_CORE_FLAG_POWEROFF_ON_SLEEP */
 			cy,flags = <2>;
-
+			cy,pname = "SM-G386T";
 			cy,btn_keys = <
 				       254 /* KEY_MENU -> KEY_RECENT */
 				       158 /* KEY_BACK */
@@ -589,7 +591,7 @@
 				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
-				qcom,current-setting = <40>;
+				qcom,current-setting = <30>;
 				qcom,id = <6>;
 				qcom,mode = "pwm";
 				qcom,pwm-us = <1000>;

@@ -23,9 +23,13 @@
 #endif
 
 #ifdef CONFIG_SEC_FACTORY
-#if defined(CONFIG_MACH_KANAS3G_CTC) || defined(CONFIG_MACH_HEAT_AIO)
+#if defined(CONFIG_MACH_KANAS3G_CTC) || defined(CONFIG_MACH_HEAT_AIO) || defined(CONFIG_MACH_KANAS3G_CMCC)
 #define MUIC_SUPPORT_CARDOCK_FUNCTION 1
 #endif
+#endif
+
+#if defined(CONFIG_RT8973_JIG_WAKEUP)
+extern int rt8973_dock_init(void);
 #endif
 
 enum {

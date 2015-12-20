@@ -2,6 +2,9 @@
 
 export ARCH=arm
 export CROSS_COMPILE=/opt/toolchains/arm-eabi-4.7/bin/arm-eabi-
+mkdir output
 
-make msm8226-sec_defconfig VARIANT_DEFCONFIG=msm8226-sec_milletwifikx_defconfig SELINUX_DEFCONFIG=selinux_defconfig TIMA_DEFCONFIG=tima8226_defconfig
-make
+make -C $(pwd) O=output VARIANT_DEFCONFIG=msm8926-sec_matisselte_defconfig msm8226-sec_defconfig SELINUX_DEFCONFIG=selinux_defconfig
+make -C $(pwd) O=output
+
+cp output/arch/arm/boot/Image $(pwd)/arch/arm/boot/zImage

@@ -26,7 +26,7 @@
 
 #define CYTTSP4_I2C_IRQ_GPIO 17
 
-#ifdef CONFIG_MACH_AFYONLTE_TMO
+#if defined(CONFIG_MACH_AFYONLTE_TMO) || defined(CONFIG_MACH_AFYONLTE_CAN) || (CONFIG_MACH_AFYONLTE_MTR)
 extern int system_rev;
 #endif
 
@@ -122,13 +122,13 @@ static int cy_hw_power(int on, int use_irq, int irq_gpio)
 		pr_info("%s: tsp lvs1_1p8 on is finished.\n", __func__);
 
 		/* Delay for tsp chip is ready for i2c before enable irq */
-		msleep(20);
+		//msleep(20);
 		/* Enable the IRQ */
 		if (use_irq) {
 			//enable_irq(gpio_to_irq(irq_gpio));
 			//pr_debug("Enabled IRQ %d for TSP\n", gpio_to_irq(irq_gpio));
 		}
-		#ifdef CONFIG_MACH_AFYONLTE_TMO
+		#if defined(CONFIG_MACH_AFYONLTE_TMO) || defined(CONFIG_MACH_AFYONLTE_CAN) || (CONFIG_MACH_AFYONLTE_MTR)
 		if(system_rev > 1){
 			gpio_tlmm_config(GPIO_CFG(CYTTSP4_I2C_IRQ_GPIO, 0,
 					GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);
@@ -154,7 +154,7 @@ static int cy_hw_power(int on, int use_irq, int irq_gpio)
 			return -1;
 		}
 		pr_info("%s: tsp 1.8V off is finished.\n", __func__);
-		#ifdef CONFIG_MACH_AFYONLTE_TMO		
+		#if defined(CONFIG_MACH_AFYONLTE_TMO) || defined(CONFIG_MACH_AFYONLTE_CAN) || (CONFIG_MACH_AFYONLTE_MTR)
 		if(system_rev > 1){
 			gpio_tlmm_config(GPIO_CFG(CYTTSP4_I2C_IRQ_GPIO, 0,
 					GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), 1);
@@ -171,7 +171,7 @@ static int cy_hw_power(int on, int use_irq, int irq_gpio)
 			 __func__, avdd_gpio, ret);
 		return -EINVAL;
 	}
-
+	msleep(50);
 	return 0;
 }
 /*************************************************************************************************
@@ -198,10 +198,18 @@ int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 	int irq_gpio = pdata->irq_gpio;	
 	
 		if (on) {
-		gpio_request(irq_gpio, "TSP_INT");
+		rc = gpio_request(irq_gpio, "TSP_INT");
+		if(rc < 0){
+			pr_err("%s: unable to request TSP_INT\n", __func__);
+			return rc;
+		}
 		gpio_direction_input(irq_gpio);
-		gpio_request(avdd_gpio, "TSP_AVDD_gpio");
-		#ifdef CONFIG_MACH_AFYONLTE_TMO	
+		rc = gpio_request(avdd_gpio, "TSP_AVDD_gpio");
+		if(rc < 0){
+			pr_err("%s: unable to request TSP_AVDD_gpio\n", __func__);
+			return rc;
+		}
+		#if defined(CONFIG_MACH_AFYONLTE_TMO) || defined(CONFIG_MACH_AFYONLTE_CAN) || (CONFIG_MACH_AFYONLTE_MTR)
 		if(system_rev > 1){
 			gpio_tlmm_config(GPIO_CFG(CYTTSP4_I2C_IRQ_GPIO, 0,
 				GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), 1);

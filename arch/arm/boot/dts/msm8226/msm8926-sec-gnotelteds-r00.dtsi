@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-/include/ "dsi_panel_magna_ea8061v_octa_720p_video.dtsi"
-/include/ "msm8926-camera-sensor-mtp-r03.dtsi"
+/include/ "dsi-panel-s6e88a0-qhd-video.dtsi"
+/include/ "msm8926-camera-sensor-mtp-gnotelteds-r00.dtsi"
 
 &soc {
 	serial@f991f000 {
@@ -61,14 +61,17 @@
 	};
 
 	i2c@f9924000 { /* BLSP1 QUP2 */
+		qcom,scl-gpio = <&msmgpio 7 0>;
+		qcom,sda-gpio = <&msmgpio 6 0>;
+		qcom,master-id = <86>;
 		accelerometer@18 {
 			compatible = "bma255-i2c";
 			reg = <0x18>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <64 0>;
 			bma255-i2c,i2c-pull-up = <1>;
-			bma255-i2c,reg_vdd = "8226_l19";
-			bma255-i2c,reg_vio = "8226_lvs1";
+			bma255-i2c,vdd-supply = <&pm8226_l19>;
+			bma255-i2c,vdd-io-supply = <&pm8226_lvs1>;
 			bma255-i2c,acc_int1-gpio = <&msmgpio 64 0x1>;
 			bma255-i2c,used_chip = "BMA25X_ENABLED";
 			bma255-i2c,chip_pos = <3>;
@@ -82,15 +85,12 @@
 			HSCDTD008-i2c,reg_vdd = "8226_l19";
 			HSCDTD008-i2c,reg_vio = "8226_lvs1";
 		};
-		gp2a030@39 {
-			compatible = "gp2a,gp2a030";
+		taos@39 {
+			compatible = "taos,tmd27723";
 			reg = <0x39>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <65 0>;
-			gp2a,p_out-gpio = <&msmgpio 65 0>;
-			gp2a,prox_cal_path = "/data/prox_cal";
-			gp2a,vdd_2p85 = "8226_l19";
-			gp2a,version = <1>;
+			taos,irq_gpio = <&msmgpio 65 0>;
 		};
 	};
 
@@ -98,51 +98,30 @@
 		compatible = "qcom,i2c-qup";
 		qcom,scl-gpio = <&msmgpio 19 0>;
 		qcom,sda-gpio = <&msmgpio 18 0>;
-		tsp_test@24 {
-				compatible = "cy,cyttsp5_i2c_adapter";
-				reg = <0x24>; /*slave address*/
-				cy,adapter_id = "cyttsp5_i2c_adapter";
+		status = "okay";		
 
-				cy,core {
-					cy,name = "cyttsp5_core";
-
-					cy,irq_gpio = <17>;
-					cy,hid_desc_register = <1>;
-					cy,pwr_1p8 = <31>; /*<&msmgpio 31 0x01>; */ /*Touch En 1 gpio*/
-					cy,pwr_3p3 = <60>;  /* <&msmgpio 60 0x01>; */ /* Touch En2 gpio */
-
-					cy,mt {
-						cy,name = "cyttsp5_mt";
-						cy,inp_dev_name = "sec_touchscreen";
-						cy,abs =
-							/* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
-							<0x35 0 720 0 0
-							/* ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0 */
-							0x36 0 1280 0 0
-							/* ABS_MT_PRESSURE, CY_ABS_MIN_P, CY_ABS_MAX_P, 0, 0 */
-							0x3a 0 255 0 0
-							/* CY_IGNORE_VALUE, CY_ABS_MIN_W, CY_ABS_MAX_W, 0, 0 */
-							0xffff 0 255 0 0
-							/* ABS_MT_TRACKING_ID, CY_ABS_MIN_T, CY_ABS_MAX_T, 0, 0 */
-							0x39 0 15 0 0
-							/* ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0 */
-							0x30 0 255 0 0
-							/* ABS_MT_TOUCH_MINOR, 0, 255, 0, 0 */
-							0x31 0 255 0 0
-							/* ABS_MT_ORIENTATION, -128, 127, 0, 0 */
-							0x34 0xfffffed7 127 0 0
-							/* ABS_MT_TOOL_TYPE, 0, MT_TOOL_MAX, 0, 0 */
-							0x37 0 1 0 0>;
-					};
-				};
-			};
+		synaptics_rmi4_i2c@20 {
+			compatible = "synaptics,rmi4-ts";
+			reg = <0x20>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0>;
+			vcc_en-supply = <&pm8226_lvs1>;
+			synaptics,supply-num = <1>;		/* the number of regulators */
+			synaptics,supply-name = "8226_lvs1";	/* the name of regulators, in power-on order */
+			synaptics,external_ldo = <&msmgpio 31 0x1>;
+			synaptics,irq-gpio = <&msmgpio 17 0x0>;
+			synaptics,tsp-coords = <539 959>;
+			synaptics,i2c-pull-up = <1>;
+			synaptics,tsp-project = "G";
+			synaptics,tsp-extra_config = <0 0 0 0>;/* <"pwrctrl", "N", "N", "N"> */
+		};
 	};
 
 	i2c@20 {
 		cell-index = <20>;
 		compatible = "i2c-gpio";
 		gpios = <&msmgpio 34 0 /* sda */
-			&msmgpio 36 0 /* scl */>;
+			&msmgpio 33 0 /* scl */>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -160,26 +139,23 @@
 
 	i2c@21 {
 		cell-index = <21>;
-		compatible = "i2c-gpio";
-		gpios = <&msmgpio 22 0 /* sda */
-		&msmgpio 23 0 /* scl */
-		>;
-		#address-cells = <1>;
-		#size-cells = <0>;
+                compatible = "i2c-gpio";
+                gpios = <&msmgpio 22 0 /*SDA*/
+                        &msmgpio 23 0 /*SCL*/
+                        >;
+		i2c-gpio,delay-us = <2>;
+		touchkey@20{
+			compatible = "abov,mc96ft16xx";
+			reg = <0x20>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <49 0>;
+			abov,sda-gpio = <&msmgpio 22 0>;
+			abov,scl-gpio = <&msmgpio 23 0>;
+			abov,irq-gpio = <&msmgpio 49 0>;
+			abov,rst-gpio = <&msmgpio 56 0>;
+			abov,tkey_en-gpio = <&pm8226_mpps 6 0x00>;
+			vddo-supply = <&pm8226_lvs1>;
 
-		cypress_touchkey@20 {
-				compatible = "cypress,cypress-tkey";
-				reg = <0x20>; /*slave address*/
-				interrupt-parent = <&msmgpio>;
-				interrupts = <49 0>; /* Touch int gpio */
-				vdd_led-supply = <&pm8226_l18>;
-				vcc_en-supply = <&pm8226_l27>;
-				cypress,scl-gpio = <&msmgpio 23 0x00>;
-				cypress,sda-gpio = <&msmgpio 22 0x00>;
-				cypress,irq-gpio = <&msmgpio 49 0x00>;
-				/* cypress,touchkey_id-gpio = <&msmgpio 101 0x00>; */
-				cypress,tkey-keycodes = <254 158>;
-				cypress,i2c-pull-up = <1>;
 		};
 	};
 	gpio_keys {
@@ -228,20 +204,8 @@
 	};
 	alps {
 			compatible = "alps-input";
+			alps,mag-position  = <6>;
 	};
-	spi@f9923000 {
-		ethernet-switch@3 {
-			compatible = "micrel,ks8851";
-			reg = <3>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <115 0x8>;
-			spi-max-frequency = <4800000>;
-			rst-gpio = <&msmgpio 114 0>;
-			vdd-io-supply = <&pm8226_lvs1>;
-			vdd-phy-supply = <&pm8226_lvs1>;
-		};
-	};
-
 	sound {
 		qcom,audio-routing =
 			"RX_BIAS", "MCLK",
@@ -654,7 +618,7 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_magna_720p_berluti3g>;
+	qcom,dsi-pref-prim-pan = <&dsi_s6e88a0_qhd_panel>;
 	vddio-supply = <&pm8226_l8>;
 	vdda-supply = <&pm8226_l4>;
 	qcom,platform-bist-ctrl = [00 00 b1 ff			 /*!!!! BIST Ctrl settings */
@@ -689,7 +653,7 @@
 	};
 };
 
-&dsi_magna_720p_berluti3g  {
+&dsi_s6e88a0_qhd_panel  {
 	qcom,cont-splash-enabled = <1>;
 };
 

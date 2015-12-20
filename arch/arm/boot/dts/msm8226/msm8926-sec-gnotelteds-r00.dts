@@ -24,7 +24,7 @@
 
 / {
 	model = "[GNOTELTEDS-EUR-OPEN] Rev-00-MTP-v1";
-	compatible = "qcom,msm8926-mtp", "qcom,msm8926", "qcom,mtp";
+	compatible = "qcom,msm8226-mtp", "qcom,msm8926", "qcom,mtp";
 	qcom,msm-id = <0xC808FF01 0 0x10001>;
 };
 

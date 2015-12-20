@@ -1753,7 +1753,6 @@ int synaptics_fw_updater(unsigned char *fw_data)
 {
 	struct synaptics_rmi4_data *rmi4_data;
 	int retval;
-	int before_test_result = 0, after_test_result = 0;
 
 	if (!fwu)
 		return -ENODEV;
@@ -1776,30 +1775,8 @@ int synaptics_fw_updater(unsigned char *fw_data)
 	fwu->ext_data_source = fw_data;
 	fwu->config_area = UI_CONFIG_AREA;
 
-	before_test_result = synaptics_rmi4_tsp_read_test_result(rmi4_data);
-
 	retval = fwu_start_reflash();
-	if (retval < 0)
-		goto out_fw_update;
 
-	after_test_result = synaptics_rmi4_tsp_read_test_result(rmi4_data);
-	if (before_test_result != after_test_result) {
-		dev_info(&rmi4_data->i2c_client->dev,
-			"%s: run set_tsp_test_result. [%x]/[%x]\n",
-				__func__, before_test_result, after_test_result);
-
-		retval = synaptics_rmi4_set_tsp_test_result_in_config(before_test_result);
-		if (retval < 0)
-			dev_err(&rmi4_data->i2c_client->dev,
-				"%s: Failed to write tsp_test_result in config\n",
-					__func__);
-	} else {
-		dev_info(&rmi4_data->i2c_client->dev,
-			"%s: same tsp_test_result. [%x]/[%x]\n",
-				__func__, before_test_result, after_test_result);
-	}
-
-out_fw_update:
 	return retval;
 }
 EXPORT_SYMBOL(synaptics_fw_updater);

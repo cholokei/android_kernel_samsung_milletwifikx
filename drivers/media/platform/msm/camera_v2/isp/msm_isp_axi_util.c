@@ -408,6 +408,8 @@ void msm_isp_sof_notify(struct vfe_device *vfe_dev,
 	}
 
 	sof_event.frame_id = vfe_dev->axi_data.src_info[frame_src].frame_id;
+	vfe_dev->frame_id = vfe_dev->axi_data.src_info[frame_src].frame_id;
+	vfe_dev->eof_event_occur = 0;
 	sof_event.timestamp = ts->event_time;
 	msm_isp_send_event(vfe_dev, ISP_EVENT_SOF, &sof_event);
 }
@@ -939,7 +941,9 @@ static int msm_isp_axi_wait_for_cfg_done(struct vfe_device *vfe_dev,
 	spin_lock_irqsave(&vfe_dev->shared_data_lock, flags);
 	init_completion(&vfe_dev->stream_config_complete);
 	vfe_dev->axi_data.pipeline_update = camif_update;
-#if defined(CONFIG_MACH_MILLET3G_CHN_OPEN)
+#if defined(CONFIG_MACH_AFYONLTE_TMO) \
+	|| defined(CONFIG_MACH_AFYONLTE_MTR) \
+	|| defined(CONFIG_SEC_RUBENS_PROJECT)
 	vfe_dev->axi_data.stream_update = 1;
 #else
 	vfe_dev->axi_data.stream_update = 2;
@@ -1013,7 +1017,10 @@ static void msm_isp_get_stream_wm_mask(
 		*wm_reload_mask |= (1 << stream_info->wm[i]);
 }
 
-#if defined(CONFIG_MACH_MILLET3G_CHN_OPEN)
+#if defined(CONFIG_MACH_AFYONLTE_TMO) \
+	|| defined(CONFIG_MACH_AFYONLTE_MTR) \
+	|| defined(CONFIG_SEC_RUBENS_PROJECT)
+
 static void msm_isp_axi_stream_update_new(struct vfe_device *vfe_dev, enum msm_isp_camif_update_state camif_update)
 {
     int i;
@@ -1083,7 +1090,9 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev,
 		vfe_dev->hw_info->vfe_ops.core_ops.
 			update_camif_state(vfe_dev, camif_update);
 	}
-#if defined(CONFIG_MACH_MILLET3G_CHN_OPEN)
+#if defined(CONFIG_MACH_AFYONLTE_TMO) \
+	|| defined(CONFIG_MACH_AFYONLTE_MTR) \
+	|| defined(CONFIG_SEC_RUBENS_PROJECT)
 	if (wait_for_complete){
 		msm_isp_axi_stream_update_new(vfe_dev, camif_update);
 		rc = msm_isp_axi_wait_for_cfg_done(vfe_dev, camif_update);
@@ -1108,7 +1117,9 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 			HANDLE_TO_IDX(stream_cfg_cmd->stream_handle[i])];
 		stream_info->state = STOP_PENDING;
 	}
-#if defined(CONFIG_MACH_MILLET3G_CHN_OPEN)
+#if defined(CONFIG_MACH_AFYONLTE_TMO) \
+	|| defined (CONFIG_MACH_AFYONLTE_MTR) \
+	|| defined(CONFIG_SEC_RUBENS_PROJECT)
 	pr_err("[richard] %s : state [%d], camif_update [%d]\n", __func__, stream_info->state, camif_update);
 	msm_isp_axi_stream_update_new(vfe_dev, DISABLE_CAMIF);
 	rc = msm_isp_axi_wait_for_cfg_done(vfe_dev, NO_UPDATE);

@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8226-camera-sensor-mtp-matisse_eur-r02.dtsi"
-/include/ "dsi_panel_sdc_wxga_video.dtsi"
+/include/ "msm8226-camera-sensor-mtp-t10-eur-r00.dtsi"
+/include/ "dsi_panel_sdc_wxga_video_tn10.dtsi"
 
 &soc {
 	serial@f991f000 {
@@ -174,33 +174,31 @@
 		status="disabled";
 	};
 
-	i2c@f9927000{ /* BLSP1 QUP5 Hardware ID BLSP5 */
-		compatible = "qcom,i2c-qup";
-		qcom,scl-gpio = <&msmgpio 19 0>;
-		qcom,sda-gpio = <&msmgpio 18 0>;
-		atmel_mxt_1188s@4a {
-				compatible = "atmel,mxts-ts";
-				reg = <0x4a>; /*slave address*/
+	i2c@35{
+		cell-index = <35>;
+		compatible = "i2c-gpio";
+		gpios = <&msmgpio 18 0 /* sda */
+				 &msmgpio 19 0 /* scl */
+				>;
+		i2c-gpio,delay-us = <2>;
+		fts_touch@49 {
+				compatible = "stm,fts_touch";
+				reg = <0x49>;
 				interrupt-parent = <&msmgpio>;
-				interrupts = <17 0>; /* Touch int gpio */
-				mxts,tsppwr_en = <&msmgpio 31 0x1>;
-				mxts,tsppwr_en1 = <&msmgpio 73 0x1>;
-				mxts,vendor1 = <&msmgpio 55 0x1>;
-				/*vcc_en-supply = <&pm8941_l10>;*/
-				mxts,irq-gpio = <&msmgpio 17 0x00>; /*TSP IRQ GPIO */
-				mxts,rst = <&pm8226_gpios 6 0x1>;
-				mxts,i2c-pull-up = <1>;
-				mxts,num_x = <27>; /*num of x-node*/
-				mxts,num_y = <44>; /*num of y node*/
-				mxts,max_x = <4095>; /*max x*/
-				mxts,max_y = <4095>; /*max y*/
-				mxts,tsp_coord = <27 44 4095 4095>;
-				mxts,pname = "SM-T531"; /*Matisse SM-T531*/
+				interrupts = <17 0>;
+				fts,vdd_en-gpio = <&msmgpio 31 0x00>;
+				fts,irq-gpio = <&msmgpio 17 0x00>;
+				fts,vendor1 = <&msmgpio 55 0x0>;
+				fts,vendor2 = <&msmgpio 73 0x0>;
+				vcc_en-supply = <&pm8226_l23>;
 		};
 	};
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
+
+		vddo-supply = <&pm8226_l6>;
+		vddo-voltage = <1800>;
 
 		home_key {
 			label = "home_key";
@@ -711,9 +709,19 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_sdc_wxga_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_sdc_wxga_vid_tn10>;
 };
 
-&dsi_sdc_wxga_vid {
-	qcom,cont-splash-enabled;
+/* RPM controlled regulators: */
+&rpm_bus {
+	rpm-regulator-ldoa23 {
+		status = "okay";
+		pm8226_l23: regulator-l23 {
+			regulator-name = "8226_l23";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+			qcom,init-voltage = <1800000>;
+			status = "okay";
+		};
+	};
 };

@@ -24,7 +24,7 @@
 #define MAX_BTN_NUM 4
 
 extern struct class *sec_class;
-
+extern const char *model_name;
 enum {
 	FACTORYCMD_WAITING,
 	FACTORYCMD_RUNNING,
@@ -89,7 +89,7 @@ struct factory_cmd factory_cmds[] = {
 	{FACTORY_CMD("run_difference_read", run_difference_read),},
 	{FACTORY_CMD("get_difference", get_difference),},
 	{FACTORY_CMD("get_difference_btn", get_difference_btn),},
-	{FACTORY_CMD("run_idac_read", run_idac_read),},
+	{FACTORY_CMD("run_local_idac_read", run_idac_read),},
 	{FACTORY_CMD("get_global_idac", get_global_idac),},
 	{FACTORY_CMD("get_local_idac", get_local_idac),},
 	{FACTORY_CMD("get_global_idac_btn", get_global_idac_btn),},
@@ -209,12 +209,12 @@ static void get_config_ver(void *device_data)
 	struct cyttsp4_samsung_sysfs_data* ssd =
 		(struct cyttsp4_samsung_sysfs_data *) device_data;
 	char strbuff[16] = {0};
-	
+
 	set_default_result(ssd);
 
 	if (ssd->si) {
-		snprintf(strbuff, sizeof(strbuff), "%02x",
-			ssd->si->sti->config_version);
+		snprintf(strbuff, sizeof(strbuff), "%s_%02x",
+			model_name,ssd->si->sti->config_version);
 		ssd->factory_cmd_state = FACTORYCMD_OK;
 	} else {
 		sprintf(strbuff, "%s", "NG");
@@ -705,7 +705,12 @@ static void not_support_cmd(void *device_data)
 	set_default_result(ssd);
 	sprintf(strbuff, "%s", "NA");
 	set_cmd_result(ssd, strbuff, strnlen(strbuff, sizeof(strbuff)));
-	ssd->factory_cmd_state = FACTORYCMD_NOT_APPLICABLE;
+
+	mutex_lock(&ssd->factory_cmd_lock);
+	ssd->factory_cmd_is_running = false;
+	mutex_unlock(&ssd->factory_cmd_lock);
+
+	ssd->factory_cmd_state = FACTORYCMD_WAITING;
 	dev_info(ssd->dev, "%s: \"%s(%d)\"\n", __func__,
 		strbuff, strnlen(strbuff, sizeof(strbuff)));
 	return;
@@ -931,7 +936,7 @@ static ssize_t key_sensitivity_show(struct device *dev,
 }
 
 
-static ssize_t menu_sensitivity_show(struct device *dev, 
+static ssize_t recent_sensitivity_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	return key_sensitivity_show(dev, attr, buf, 0);
@@ -957,18 +962,28 @@ static ssize_t touchkey_threshold_show(struct device *dev,
 			__func__, rc);
 		return 0;
 	}
-	
 	return sprintf(buf, "%d\n", value);
 }
 
-static DEVICE_ATTR(touchkey_menu, S_IRUGO, menu_sensitivity_show, NULL);
+static ssize_t touch_version_read(struct device *dev,
+	struct device_attribute *attr, char *buf){
+	return snprintf(buf, 4, "%s", "N");
+}
+
+static DEVICE_ATTR(touchkey_recent, S_IRUGO, recent_sensitivity_show, NULL);
 static DEVICE_ATTR(touchkey_back, S_IRUGO, back_sensitivity_show, NULL);
 static DEVICE_ATTR(touchkey_threshold, S_IRUGO, touchkey_threshold_show, NULL);
+static DEVICE_ATTR(touchkey_firm_version_panel, S_IRUGO,
+							touch_version_read, NULL);
+static DEVICE_ATTR(touchkey_firm_version_phone, S_IRUGO,
+							touch_version_read, NULL);
 
 static struct attribute *sec_touch_key_attributes[] = {
-	&dev_attr_touchkey_menu.attr,
+	&dev_attr_touchkey_recent.attr,
 	&dev_attr_touchkey_back.attr,
 	&dev_attr_touchkey_threshold.attr,
+	&dev_attr_touchkey_firm_version_panel.attr,
+	&dev_attr_touchkey_firm_version_phone.attr,
 	NULL,
 };
 static struct attribute_group sec_touch_key_attr_group = {
